@@ -1,0 +1,122 @@
+# Configuration générale du plugin SHItemsBoosts
+
+settings:
+  # Nombre maximum de boosts actifs en même temps sur la carte.
+  max-concurrent-items: 50
+  # Hauteur à laquelle l'item flotte au-dessus du point de spawn défini (en blocs).
+  spawn-height-offset: 1.0
+  # Intervalle en ticks (20 ticks = 1 seconde) pour vérifier si un joueur est proche d'un item.
+  # Une valeur plus basse est plus réactive mais consomme plus de ressources.
+  pickup-check-interval-ticks: 10
+  # Intervalle en secondes pour essayer de faire apparaître un nouvel item s'il y a de la place.
+  spawn-check-interval-seconds: 3
+  # Rayon de détection pour ramasser l'item (en blocs).
+  pickup-radius: 2
+  startup-burst: true
+
+sound:
+  # Faut-il jouer un son aux joueurs proches lorsqu'un nouvel item apparaît ?
+  play-sound-on-spawn: true
+  # Le son joué lors de l'apparition. Liste des sons : https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Sound.html
+  spawn-sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+  # Le volume du son d'apparition.
+  spawn-sound-volume: 0.5
+  # La tonalité (pitch) du son d'apparition.
+  spawn-sound-pitch: 2
+  # Le rayon (en blocs) dans lequel les joueurs entendront le son d'apparition.
+  spawn-sound-radius: 25
+
+# --- Définition des boosts ---
+# Plus le poids est élevé, plus le boost est commun.
+# Exemple : un boost avec un poids de 50 a 5 fois plus de chance d'apparaître qu'un boost avec un poids de 10.
+boosts:
+  speed_boost:
+    item-type: "SUGAR"
+    display-name: "&b&lVitesse II"
+    enchanted: true
+    effect-type: "SPEED"
+    duration-seconds: 5
+    amplifier: 1 # Niveau 2
+    weight: 40 # Commun
+    pickup-message: "&7&l« &a&lSH &8&l» &fBoost reçu: &b%boost_name% &7(&b%duration%s&7)"
+    pickup-sound: "ENTITY_PLAYER_LEVELUP"
+    pickup-sound-volume: 1.0
+    pickup-sound-pitch: 1.2
+
+  jump_boost:
+    item-type: "RABBIT_FOOT"
+    display-name: "&e&lSaut Amélioré III"
+    enchanted: true
+    effect-type: "JUMP_BOOST"
+    duration-seconds: 10
+    amplifier: 2 # Niveau 3
+    weight: 40 # Commun
+    pickup-message: "&7&l« &a&lSH &8&l» &fBoost reçu: &e%boost_name% &7(&e%duration%s&7)"
+    pickup-sound: "BLOCK_SLIME_BLOCK_FALL"
+    pickup-sound-volume: 1.0
+    pickup-sound-pitch: 1.0
+
+  saturation_boost:
+    item-type: "GLISTERING_MELON_SLICE"
+    display-name: "&e&lSaturation"
+    enchanted: true
+    effect-type: "SATURATION"
+    duration-seconds: 2
+    amplifier: 0 # Niveau 2
+    weight: 15 # Rare
+    pickup-message: "&7&l« &a&lSH &8&l» &fBoost reçu: &e%boost_name%"
+    pickup-sound: "ENTITY_GENERIC_EAT"
+    pickup-sound-volume: 1.0
+    pickup-sound-pitch: 1.0
+
+  resistance_boost:
+    item-type: "IRON_INGOT"
+    display-name: "&7&lRésistance II"
+    enchanted: false
+    effect-type: "RESISTANCE"
+    duration-seconds: 10
+    amplifier: 1 # Niveau 2
+    weight: 25 # Peu commun
+    pickup-message: "&7&l« &a&lSH &8&l» &fBoost reçu: &7%boost_name% &7(&7%duration%s&7)"
+    pickup-sound: "BLOCK_ANVIL_USE"
+    pickup-sound-volume: 0.8
+    pickup-sound-pitch: 1.5
+
+  health_boost:
+    item-type: "GOLDEN_APPLE"
+    display-name: "&6&lAbsorption II"
+    enchanted: true
+    effect-type: "ABSORPTION"
+    duration-seconds: 20
+    amplifier: 1 # Absorption II
+    weight: 25 # Peu commun
+    pickup-message: "&7&l« &a&lSH &8&l» &fBoost reçu: &6%boost_name% &7(&6%duration%s&7)"
+    pickup-sound: "ENTITY_GENERIC_DRINK"
+    pickup-sound-volume: 1.0
+    pickup-sound-pitch: 1.0
+
+  regeneration_boost:
+    item-type: "GHAST_TEAR"
+    display-name: "&d&lRégénération III"
+    enchanted: true
+    effect-type: "REGENERATION"
+    duration-seconds: 4
+    amplifier: 2 # Niveau 3
+    weight: 15 # Rare
+    pickup-message: "&7&l« &a&lSH &8&l» &fBoost reçu: &d%boost_name% &7(&d%duration%s&7)"
+    pickup-sound: "BLOCK_BEACON_POWER_SELECT"
+    pickup-sound-volume: 1.0
+    pickup-sound-pitch: 1.0
+    
+  strength_boost:
+    item-type: "BLAZE_POWDER"
+    display-name: "&c&lForce II"
+    enchanted: true
+    effect-type: "STRENGTH"
+    duration-seconds: 10
+    amplifier: 1 # Niveau 2
+    weight: 10 # Très Rare
+    pickup-message: "&7&l« &a&lSH &8&l» &fBoost reçu: &c%boost_name% &7(&c%duration%s&7)"
+    pickup-sound: "ENTITY_WITHER_SPAWN"
+    pickup-sound-volume: 0.3
+    pickup-sound-pitch: 2
