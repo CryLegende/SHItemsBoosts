@@ -81,7 +81,7 @@ public class ItemManager {
         ItemMeta meta = itemStack.getItemMeta();
         meta.setDisplayName(boostToSpawn.getDisplayName());
         if (boostToSpawn.isEnchanted()) {
-            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addEnchant(Enchantment.LUCK_OF_THE_SEA, 1, true);
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
         meta.getPersistentDataContainer().set(boostItemKey, PersistentDataType.BYTE, (byte) 1);
