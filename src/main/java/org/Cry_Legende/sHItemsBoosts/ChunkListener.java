@@ -1,18 +1,18 @@
 package org.Cry_Legende.sHItemsBoosts;
 
-import org.bukkit.Chunk;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.world.EntitiesLoadEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
  * Ce listener agit comme un filet de sécurité permanent.
- * Il vérifie chaque chunk lors de son chargement pour y trouver et supprimer
+ * Il vérifie les entités de chaque chunk lors de leur chargement pour y trouver et supprimer
  * d'éventuels items orphelins du plugin.
  */
 public class ChunkListener implements Listener {
@@ -27,14 +27,12 @@ public class ChunkListener implements Listener {
         this.boostItemKey = new NamespacedKey(plugin, "shib_boost_item");
     }
 
+    // Sur Paper les entités se chargent après le chunk : au ChunkLoadEvent, chunk.getEntities() est encore vide.
     @EventHandler
-    public void onChunkLoad(ChunkLoadEvent event) {
-        Chunk chunk = event.getChunk();
-
-        // On parcourt toutes les entités du chunk qui vient d'être chargé
-        for (Entity entity : chunk.getEntities()) {
-            if (entity instanceof Item) {
-                Item item = (Item) entity;
+    public void onEntitiesLoad(EntitiesLoadEvent event) {
+        // On parcourt toutes les entités qui viennent d'être chargées
+        for (Entity entity : event.getEntities()) {
+            if (entity instanceof Item item) {
                 ItemMeta meta = item.getItemStack().getItemMeta();
 
                 // On vérifie si l'item a notre marqueur
@@ -48,5 +46,11 @@ public class ChunkListener implements Listener {
                 }
             }
         }
+    }
+
+    // Un monde chargé après le démarrage (PhantomWorlds) : les points qui l'attendaient deviennent utilisables.
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent event) {
+        plugin.getLocationManager().resolvePending();
     }
 }

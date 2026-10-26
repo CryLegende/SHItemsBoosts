@@ -18,6 +18,7 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
 public class ItemManager {
@@ -33,6 +34,16 @@ public class ItemManager {
     private final NamespacedKey boostItemKey;
     private BukkitTask spawnerTask;
     private BukkitTask pickupTask;
+
+    // Réglages lus une fois au chargement (loadBoostTypes), plutôt qu'à chaque passage des tâches.
+    private int maxItems;
+    private double yOffset;
+    private double pickupRadiusSquared;
+    private boolean playSpawnSound;
+    private Sound spawnSound;
+    private float spawnSoundVolume;
+    private float spawnSoundPitch;
+    private double spawnSoundRadiusSquared;
 
     public ItemManager(SHItemsBoosts plugin) {
         this.plugin = plugin;
@@ -52,7 +63,6 @@ public class ItemManager {
 
     // --- spawnSingleItem() a été modifié pour utiliser la nouvelle structure ---
     private boolean spawnSingleItem() {
-        int maxItems = plugin.getConfig().getInt("settings.max-concurrent-items", 20);
         // On vérifie la taille de notre nouvelle map
         if (activeBoosts.size() >= maxItems || boostTypes.isEmpty()) {
             return false;
@@ -66,15 +76,14 @@ public class ItemManager {
             return false;
         }
 
-        Random random = new Random();
-        Location spawnLocation = availableLocations.get(random.nextInt(availableLocations.size())); // C'est notre clé
+        Location spawnLocation = availableLocations.get(ThreadLocalRandom.current().nextInt(availableLocations.size())); // C'est notre clé
         BoostType boostToSpawn = getRandomWeightedBoost();
         if (boostToSpawn == null) return false;
 
-        double yOffset = plugin.getConfig().getDouble("settings.spawn-height-offset", 1.0);
         Location itemSpawnLocation = spawnLocation.clone().add(0.5, yOffset, 0.5);
 
-        if (!itemSpawnLocation.getChunk().isLoaded()) return false;
+        // isChunkLoaded() ne charge rien, contrairement à getChunk() qui chargeait le chunk de façon synchrone.
+        if (!itemSpawnLocation.isWorldLoaded() || !itemSpawnLocation.isChunkLoaded()) return false;
 
         // La création de l'item reste la même...
         ItemStack itemStack = new ItemStack(boostToSpawn.getItemType());
@@ -96,7 +105,7 @@ public class ItemManager {
         // On stocke le nouvel objet ActiveBoost dans notre map
         activeBoosts.put(spawnLocation, new ActiveBoost(boostToSpawn, droppedItem.getUniqueId()));
 
-        if (plugin.getConfig().getBoolean("sound.play-sound-on-spawn", true)) {
+        if (playSpawnSound) {
             playSoundOnSpawn(itemSpawnLocation);
         }
         return true;
@@ -105,7 +114,6 @@ public class ItemManager {
     // --- checkPlayerProximity() est la partie la plus lourdement modifiée ---
     private void checkPlayerProximity() {
         if (activeBoosts.isEmpty()) return;
-        double pickupRadiusSquared = Math.pow(plugin.getConfig().getDouble("settings.pickup-radius", 1.5), 2);
 
         Iterator<Map.Entry<Location, ActiveBoost>> iterator = activeBoosts.entrySet().iterator();
         while (iterator.hasNext()) {
@@ -124,14 +132,14 @@ public class ItemManager {
             }
 
             // On s'assure que c'est bien un Item
-            if (!(entity instanceof Item)) {
+            if (!(entity instanceof Item item)) {
                 iterator.remove();
                 continue;
             }
-            Item item = (Item) entity;
+            Location itemLocation = item.getLocation();
 
             // CAS 2 : Le chunk est déchargé. L'entité est valide mais inaccessible.
-            if (!item.getLocation().getChunk().isLoaded()) {
+            if (!itemLocation.isChunkLoaded()) {
                 // C'est la logique clé : on ne fait RIEN. On l'ignore pour ce tick.
                 // On ne le supprime PAS de la map, on le garde en mémoire pour plus tard.
                 continue;
@@ -139,7 +147,7 @@ public class ItemManager {
 
             // CAS 3 : Tout est normal, le chunk est chargé, l'item est là.
             for (Player player : item.getWorld().getPlayers()) {
-                if ((player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE) && player.getLocation().distanceSquared(item.getLocation()) <= pickupRadiusSquared) {
+                if ((player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE) && player.getLocation().distanceSquared(itemLocation) <= pickupRadiusSquared) {
                     applyBoost(player, activeBoost.getBoostType());
 
                     item.remove(); // On supprime l'entité physique
@@ -172,6 +180,7 @@ public class ItemManager {
 
     public void loadBoostTypes() {
         boostTypes.clear();
+        loadSettings();
         ConfigurationSection boostSection = plugin.getConfig().getConfigurationSection("boosts");
         if (boostSection == null) {
             plugin.getLogger().warning("La section 'boosts' est manquante dans config.yml !");
@@ -183,12 +192,17 @@ public class ItemManager {
                 Material itemType = Material.valueOf(plugin.getConfig().getString(path + "item-type", "STONE").toUpperCase());
                 String displayName = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString(path + "display-name", "Boost"));
                 boolean enchanted = plugin.getConfig().getBoolean(path + "enchanted");
-                PotionEffectType effectType = PotionEffectType.getByName(plugin.getConfig().getString(path + "effect-type", "SPEED").toUpperCase());
+                PotionEffectType effectType = effect(plugin.getConfig().getString(path + "effect-type", "SPEED"));
                 int duration = plugin.getConfig().getInt(path + "duration-seconds", 10);
                 int amplifier = plugin.getConfig().getInt(path + "amplifier", 0);
                 int weight = plugin.getConfig().getInt(path + "weight", 10);
                 String pickupMessage = plugin.getConfig().getString(path + "pickup-message", "");
-                Sound pickupSound = Sound.valueOf(plugin.getConfig().getString(path + "pickup-sound", "ENTITY_EXPERIENCE_ORB_PICKUP").toUpperCase());
+                String rawPickupSound = plugin.getConfig().getString(path + "pickup-sound", "ENTITY_EXPERIENCE_ORB_PICKUP");
+                Sound pickupSound = sound(rawPickupSound);
+                if (pickupSound == null) {
+                    // Même issue qu'avant (Sound.valueOf levait l'exception) : le boost est ignoré
+                    throw new IllegalArgumentException("Son de ramassage invalide : " + rawPickupSound);
+                }
                 float pickupVolume = (float) plugin.getConfig().getDouble(path + "pickup-sound-volume", 1.0);
                 float pickupPitch = (float) plugin.getConfig().getDouble(path + "pickup-sound-pitch", 1.0);
                 if (effectType == null) {
@@ -201,6 +215,43 @@ public class ItemManager {
             }
         }
         plugin.getLogger().info(boostTypes.size() + " types de boost chargés.");
+    }
+
+    private void loadSettings() {
+        maxItems = plugin.getConfig().getInt("settings.max-concurrent-items", 20);
+        yOffset = plugin.getConfig().getDouble("settings.spawn-height-offset", 1.0);
+        pickupRadiusSquared = Math.pow(plugin.getConfig().getDouble("settings.pickup-radius", 1.5), 2);
+        playSpawnSound = plugin.getConfig().getBoolean("sound.play-sound-on-spawn", true);
+        String rawSpawnSound = plugin.getConfig().getString("sound.spawn-sound", "ENTITY_EXPERIENCE_ORB_PICKUP");
+        spawnSound = sound(rawSpawnSound);
+        if (playSpawnSound && spawnSound == null) {
+            plugin.getLogger().warning("Son d'apparition invalide dans config.yml: " + rawSpawnSound);
+        }
+        spawnSoundVolume = (float) plugin.getConfig().getDouble("sound.spawn-sound-volume", 0.5);
+        spawnSoundPitch = (float) plugin.getConfig().getDouble("sound.spawn-sound-pitch", 1.5);
+        spawnSoundRadiusSquared = Math.pow(plugin.getConfig().getDouble("sound.spawn-sound-radius", 25), 2);
+    }
+
+    /** Son lu en config : ancien nom (ENTITY_PLAYER_LEVELUP) ou clé (minecraft:entity.player.levelup). */
+    static Sound sound(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String s = raw.trim();
+        if (s.indexOf(':') >= 0 || s.indexOf('.') >= 0) {
+            NamespacedKey key = NamespacedKey.fromString(s.toLowerCase(Locale.ROOT));
+            return key == null ? null : Registry.SOUND_EVENT.get(key);
+        }
+        try {
+            return (Sound) Sound.class.getField(s.toUpperCase(Locale.ROOT)).get(null);
+        } catch (ReflectiveOperationException | ClassCastException e) {
+            return null;
+        }
+    }
+
+    /** Effet lu en config : nom (SPEED) ou clé (minecraft:speed), comme l'ancien PotionEffectType.getByName. */
+    static PotionEffectType effect(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        NamespacedKey key = NamespacedKey.fromString(raw.trim().toLowerCase(Locale.ROOT));
+        return key == null ? null : Registry.MOB_EFFECT.get(key);
     }
 
     public void startTasks() {
@@ -226,7 +277,6 @@ public class ItemManager {
         boolean burstEnabled = plugin.getConfig().getBoolean("settings.startup-burst", true);
         if (!burstEnabled) return;
         plugin.getLogger().info("Lancement du 'burst spawn' initial...");
-        int maxItems = plugin.getConfig().getInt("settings.max-concurrent-items", 20);
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -264,7 +314,7 @@ public class ItemManager {
         if (boostTypes.isEmpty()) return null;
         int totalWeight = boostTypes.stream().mapToInt(BoostType::getWeight).sum();
         if (totalWeight <= 0) return null;
-        int randomValue = new Random().nextInt(totalWeight);
+        int randomValue = ThreadLocalRandom.current().nextInt(totalWeight);
         int currentWeight = 0;
         for (BoostType type : boostTypes) {
             currentWeight += type.getWeight();
@@ -276,18 +326,12 @@ public class ItemManager {
     }
 
     private void playSoundOnSpawn(Location loc) {
-        try {
-            Sound sound = Sound.valueOf(plugin.getConfig().getString("sound.spawn-sound", "ENTITY_EXPERIENCE_ORB_PICKUP").toUpperCase());
-            float volume = (float) plugin.getConfig().getDouble("sound.spawn-sound-volume", 0.5);
-            float pitch = (float) plugin.getConfig().getDouble("sound.spawn-sound-pitch", 1.5);
-            double radiusSquared = Math.pow(plugin.getConfig().getDouble("sound.spawn-sound-radius", 25), 2);
-            for (Player player : loc.getWorld().getPlayers()) {
-                if (player.getLocation().distanceSquared(loc) <= radiusSquared) {
-                    player.playSound(loc, sound, volume, pitch);
-                }
+        // Son invalide : signalé une fois au chargement (loadSettings)
+        if (spawnSound == null) return;
+        for (Player player : loc.getWorld().getPlayers()) {
+            if (player.getLocation().distanceSquared(loc) <= spawnSoundRadiusSquared) {
+                player.playSound(loc, spawnSound, spawnSoundVolume, spawnSoundPitch);
             }
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("Son d'apparition invalide dans config.yml: " + plugin.getConfig().getString("sound.spawn-sound"));
         }
     }
 
