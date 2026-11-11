@@ -7,16 +7,40 @@ description: Ajoute des boosts d'items dans une arène.
 
 commands:
   shitemsboosts:
-    description: Commande principale du plugin SHItemsBoosts.
+    description: Administration des boosts d'items.
     aliases: [shib]
-    permission: shitemsboosts.admin
-    usage: |
-      /shib add - Ajoute un point d'apparition à votre position.
-      /shib remove <id> - Supprime un point d'apparition via son ID.
-      /shib list - Liste tous les points d'apparition de manière interactive.
-      /shib reload - Recharge la configuration du plugin.
+    usage: /<command> <add|remove|list|tp|forcecleanup|inspect|reload>
 
 permissions:
   shitemsboosts.admin:
-    description: Donne accès à toutes les commandes d'administration de SHItemsBoosts.
+    description: Toute l'administration de SHItemsBoosts.
+    default: op
+    children:
+      shitemsboosts.admin.add: true
+      shitemsboosts.admin.remove: true
+      shitemsboosts.admin.list: true
+      shitemsboosts.admin.tp: true
+      shitemsboosts.admin.forcecleanup: true
+      shitemsboosts.admin.inspect: true
+      shitemsboosts.admin.reload: true
+  shitemsboosts.admin.add:
+    description: Ajouter un point d'apparition à sa position (/shitemsboosts add).
+    default: op
+  shitemsboosts.admin.remove:
+    description: Supprimer un point d'apparition (/shitemsboosts remove).
+    default: op
+  shitemsboosts.admin.list:
+    description: Lister les points d'apparition (/shitemsboosts list).
+    default: op
+  shitemsboosts.admin.tp:
+    description: Se téléporter à un point d'apparition (/shitemsboosts tp).
+    default: op
+  shitemsboosts.admin.forcecleanup:
+    description: Supprimer les anciens items orphelins d'un monde (/shitemsboosts forcecleanup).
+    default: op
+  shitemsboosts.admin.inspect:
+    description: Afficher les infos de l'item le plus proche (/shitemsboosts inspect).
+    default: op
+  shitemsboosts.admin.reload:
+    description: Recharger la configuration (/shitemsboosts reload).
     default: op

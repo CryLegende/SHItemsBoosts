@@ -20,15 +20,32 @@ Utilisé sur : **Opale**.
 
 ## Commandes
 
-| Commande | Alias | Description | Permission |
-|---|---|---|---|
-| `/shitemsboosts` | `/shib` | Commande principale du plugin SHItemsBoosts. | `shitemsboosts.admin` |
+Commande `/shitemsboosts` (alias `/shib`). Chaque sous-commande a sa permission, `shitemsboosts.admin` les donne toutes.
+
+| Commande | Description | Permission |
+|---|---|---|
+| `/shitemsboosts add` | Ajoute un point d'apparition à votre position. | `shitemsboosts.admin.add` |
+| `/shitemsboosts remove <id>` | Supprime un point d'apparition. | `shitemsboosts.admin.remove` |
+| `/shitemsboosts list` | Liste les points (cliquable pour se téléporter ou supprimer). | `shitemsboosts.admin.list` |
+| `/shitemsboosts tp <id>` | Vous téléporte à un point. | `shitemsboosts.admin.tp` |
+| `/shitemsboosts forcecleanup [monde]` | Supprime les anciens items orphelins d'un monde. | `shitemsboosts.admin.forcecleanup` |
+| `/shitemsboosts inspect` | Affiche les infos de l'item le plus proche. | `shitemsboosts.admin.inspect` |
+| `/shitemsboosts reload` | Recharge `config.yml` et `messages.yml`, retire puis repose les boosts. | `shitemsboosts.admin.reload` |
+
+`list`, `remove`, `reload` et `forcecleanup <monde>` marchent aussi depuis la console. `locations.yml` n'est pas relu par `reload` : il est réécrit à chaque ajout ou retrait.
 
 ## Permissions
 
 | Permission | Description | Par défaut |
 |---|---|---|
-| `shitemsboosts.admin` | Donne accès à toutes les commandes d'administration de SHItemsBoosts. | `op` |
+| `shitemsboosts.admin` | Toute l'administration (parent des permissions ci-dessous). | `op` |
+| `shitemsboosts.admin.add` | `add`. | `op` |
+| `shitemsboosts.admin.remove` | `remove`. | `op` |
+| `shitemsboosts.admin.list` | `list`. | `op` |
+| `shitemsboosts.admin.tp` | `tp`. | `op` |
+| `shitemsboosts.admin.forcecleanup` | `forcecleanup`. | `op` |
+| `shitemsboosts.admin.inspect` | `inspect`. | `op` |
+| `shitemsboosts.admin.reload` | `reload`. | `op` |
 
 ## Configuration
 
@@ -36,7 +53,8 @@ Fichiers par défaut repris du serveur (secrets remplacés par `CHANGE_ME`). Cli
 
 <pre>
 plugins/SHItemsBoosts/
-└── <a href="src/main/resources/config.yml">config.yml</a>
+├── <a href="src/main/resources/config.yml">config.yml</a>
+└── <a href="src/main/resources/messages.yml">messages.yml</a>
 </pre>
 
 ## Compilation

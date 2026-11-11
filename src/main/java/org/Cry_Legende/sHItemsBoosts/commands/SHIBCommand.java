@@ -1,34 +1,40 @@
 package org.Cry_Legende.sHItemsBoosts.commands;
 
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.Cry_Legende.sHItemsBoosts.SHItemsBoosts;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.TreeMap;
 
 public class SHIBCommand implements CommandExecutor, TabCompleter {
 
+    private static final String PERM = "shitemsboosts.admin.";
+    // Sous-commandes dans l'ordre d'affichage de la ligne d'usage
+    private static final List<String> SUBCOMMANDS = List.of("add", "remove", "list", "tp", "forcecleanup", "inspect", "reload");
+    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
+
     private final SHItemsBoosts plugin;
-    private final String prefix = ChatColor.AQUA + "[SHIB] " + ChatColor.GRAY;
 
     public SHIBCommand(SHItemsBoosts plugin) {
         this.plugin = plugin;
@@ -36,50 +42,45 @@ public class SHIBCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (args.length == 0) {
-            sendHelp(sender, label);
+        List<String> allowed = allowedSubcommands(sender);
+        if (allowed.isEmpty()) {
+            sender.sendMessage(plugin.message("no-permission"));
             return true;
         }
-
-        String subCommand = args[0].toLowerCase();
-
-        switch (subCommand) {
-            case "add":
-                handleAdd(sender);
-                break;
-            case "remove":
-                handleRemove(sender, args);
-                break;
-            case "list":
-                handleList(sender);
-                break;
-            case "reload":
-                handleReload(sender);
-                break;
-            case "tp":
-                handleTp(sender, args);
-                break;
-            case "forcecleanup":
-                handleForceCleanup(sender);
-                break;
-            // NOUVELLE COMMANDE DE DIAGNOSTIC
-            case "inspect":
-                handleInspect(sender);
-                break;
-            default:
-                sendHelp(sender, label);
-                break;
+        String sub = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
+        if (!allowed.contains(sub)) {
+            sender.sendMessage(plugin.message("usage", "%subs%", String.join("&7|&e", allowed)));
+            return true;
+        }
+        switch (sub) {
+            case "add" -> handleAdd(sender);
+            case "remove" -> handleRemove(sender, args);
+            case "list" -> handleList(sender);
+            case "tp" -> handleTp(sender, args);
+            case "forcecleanup" -> handleForceCleanup(sender, args);
+            case "inspect" -> handleInspect(sender);
+            case "reload" -> handleReload(sender);
+            default -> sender.sendMessage(plugin.message("usage", "%subs%", String.join("&7|&e", allowed)));
         }
         return true;
     }
 
-    // NOUVELLE MÉTHODE DE DIAGNOSTIC
+    /** Sous-commandes que l'expéditeur a le droit d'utiliser. */
+    private List<String> allowedSubcommands(CommandSender sender) {
+        List<String> allowed = new ArrayList<>();
+        for (String sub : SUBCOMMANDS) {
+            if (sender.hasPermission(PERM + sub)) {
+                allowed.add(sub);
+            }
+        }
+        return allowed;
+    }
+
     private void handleInspect(CommandSender sender) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(prefix + ChatColor.RED + "Cette commande doit être exécutée par un joueur.");
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
             return;
         }
-        Player player = (Player) sender;
 
         // Trouve l'item le plus proche du joueur dans un rayon de 5 blocs
         Optional<Item> closestItemOpt = player.getNearbyEntities(5, 5, 5).stream()
@@ -88,7 +89,7 @@ public class SHIBCommand implements CommandExecutor, TabCompleter {
             .min(Comparator.comparing(e -> e.getLocation().distanceSquared(player.getLocation())));
 
         if (closestItemOpt.isEmpty()) {
-            player.sendMessage(prefix + "Aucun item trouvé à proximité.");
+            player.sendMessage(plugin.message("inspect.none"));
             return;
         }
 
@@ -96,30 +97,37 @@ public class SHIBCommand implements CommandExecutor, TabCompleter {
         NamespacedKey boostItemKey = new NamespacedKey(plugin, "shib_boost_item");
         boolean hasTag = item.getItemStack().getItemMeta() != null && item.getItemStack().getItemMeta().getPersistentDataContainer().has(boostItemKey, PersistentDataType.BYTE);
 
-        player.sendMessage(ChatColor.AQUA + "--- SHIB Inspector ---");
-        player.sendMessage(ChatColor.GRAY + "Item: " + ChatColor.YELLOW + item.getItemStack().getType());
-        player.sendMessage(ChatColor.GRAY + "Pickup Delay: " + ChatColor.GOLD + item.getPickupDelay() + " ticks");
-        player.sendMessage(ChatColor.GRAY + "Unlimited Lifetime: " + (item.isUnlimitedLifetime() ? ChatColor.GREEN + "true" : ChatColor.RED + "false"));
-        player.sendMessage(ChatColor.GRAY + "Has new SHIB Tag: " + (hasTag ? ChatColor.GREEN + "true" : ChatColor.RED + "false"));
-        player.sendMessage(ChatColor.AQUA + "----------------------");
+        player.sendMessage(plugin.message("inspect.header"));
+        player.sendMessage(plugin.message("inspect.item", "%item%", String.valueOf(item.getItemStack().getType())));
+        player.sendMessage(plugin.message("inspect.pickup-delay", "%ticks%", String.valueOf(item.getPickupDelay())));
+        player.sendMessage(plugin.message("inspect.unlimited-lifetime", "%value%", plugin.message(item.isUnlimitedLifetime() ? "inspect.yes" : "inspect.no")));
+        player.sendMessage(plugin.message("inspect.tag", "%value%", plugin.message(hasTag ? "inspect.yes" : "inspect.no")));
+        player.sendMessage(plugin.message("inspect.footer"));
     }
 
-    // MÉTHODE CORRIGÉE
-    private void handleForceCleanup(CommandSender sender) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(prefix + ChatColor.RED + "Cette commande doit être exécutée par un joueur pour cibler un monde spécifique.");
+    /** Supprime les anciens items orphelins (délai de ramassage énorme, sans le marqueur actuel) d'un monde. */
+    private void handleForceCleanup(CommandSender sender, String[] args) {
+        World worldToClean;
+        if (args.length > 1) {
+            worldToClean = Bukkit.getWorld(args[1]);
+            if (worldToClean == null) {
+                sender.sendMessage(plugin.message("forcecleanup.world-unknown", "%world%", args[1]));
+                return;
+            }
+        } else if (sender instanceof Player player) {
+            worldToClean = player.getWorld();
+        } else {
+            sender.sendMessage(plugin.message("forcecleanup.world-required"));
             return;
         }
-        Player player = (Player) sender;
-        World worldToClean = player.getWorld();
 
-        sender.sendMessage(prefix + "Lancement du nettoyage forcé dans le monde '" + ChatColor.YELLOW + worldToClean.getName() + ChatColor.GRAY + "'...");
+        sender.sendMessage(plugin.message("forcecleanup.started", "%world%", worldToClean.getName()));
 
         NamespacedKey boostItemKey = new NamespacedKey(plugin, "shib_boost_item");
         int cleanedCount = 0;
 
         for (Item item : worldToClean.getEntitiesByClass(Item.class)) {
-            // CORRECTION : On vérifie si le délai est très grand, au lieu d'une valeur exacte.
+            // On vérifie si le délai est très grand, au lieu d'une valeur exacte.
             if (item.getPickupDelay() > 30000) {
                 ItemMeta meta = item.getItemStack().getItemMeta();
                 if (meta == null || !meta.getPersistentDataContainer().has(boostItemKey, PersistentDataType.BYTE)) {
@@ -129,101 +137,125 @@ public class SHIBCommand implements CommandExecutor, TabCompleter {
             }
         }
 
-        sender.sendMessage(prefix + "Nettoyage terminé. " + ChatColor.YELLOW + cleanedCount + ChatColor.GRAY + " anciens items orphelins ont été supprimés de ce monde.");
+        sender.sendMessage(plugin.message("forcecleanup.done", "%count%", String.valueOf(cleanedCount), "%world%", worldToClean.getName()));
     }
 
-    private void sendHelp(CommandSender sender, String label) {
-        sender.sendMessage(prefix + "Commandes disponibles :");
-        sender.sendMessage(ChatColor.YELLOW + "/" + label + " add, remove, list, reload");
-        sender.sendMessage(ChatColor.YELLOW + "/" + label + " forcecleanup" + ChatColor.GRAY + " - Supprime les anciens items orphelins.");
-        sender.sendMessage(ChatColor.YELLOW + "/" + label + " inspect" + ChatColor.GRAY + " - Affiche les infos de l'item le plus proche.");
-    }
-
-    // --- Le reste des méthodes est inchangé ---
     private void handleAdd(CommandSender sender) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(prefix + ChatColor.RED + "Cette commande est réservée aux joueurs.");
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
             return;
         }
-        Player player = (Player) sender;
         Location location = player.getLocation().toBlockLocation();
         int newId = plugin.getLocationManager().addLocation(location);
-        sender.sendMessage(prefix + "Point d'apparition " + ChatColor.YELLOW + "#" + newId + ChatColor.GRAY + " ajouté à votre position.");
+        sender.sendMessage(plugin.message("add.done", "%id%", String.valueOf(newId)));
     }
 
     private void handleRemove(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(prefix + "Usage: /shib remove <id>");
+            sender.sendMessage(plugin.message("remove.usage"));
             return;
         }
         try {
             int id = Integer.parseInt(args[1]);
             if (plugin.getLocationManager().removeLocation(id)) {
-                sender.sendMessage(prefix + "Point d'apparition " + ChatColor.YELLOW + "#" + id + ChatColor.GRAY + " supprimé.");
+                sender.sendMessage(plugin.message("remove.done", "%id%", String.valueOf(id)));
             } else {
-                sender.sendMessage(prefix + ChatColor.RED + "Aucun point d'apparition trouvé avec l'ID " + id + ".");
+                sender.sendMessage(plugin.message("remove.unknown", "%id%", String.valueOf(id)));
             }
         } catch (NumberFormatException e) {
-            sender.sendMessage(prefix + ChatColor.RED + "L'ID doit être un nombre.");
+            sender.sendMessage(plugin.message("remove.invalid-id"));
         }
     }
 
     private void handleList(CommandSender sender) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(prefix + ChatColor.RED + "Cette commande est réservée aux joueurs pour l'affichage interactif.");
-            return;
-        }
-        Player player = (Player) sender;
-        Map<Integer, Location> locations = plugin.getLocationManager().getSpawnLocations();
+        Map<Integer, Location> locations = new TreeMap<>(plugin.getLocationManager().getSpawnLocations());
         if (locations.isEmpty()) {
-            player.sendMessage(prefix + "Aucun point d'apparition n'a été défini. Utilisez " + ChatColor.YELLOW + "/shib add" + ChatColor.GRAY + ".");
+            sender.sendMessage(plugin.message("list.none"));
             return;
         }
-        player.sendMessage(prefix + "Liste des points d'apparition (cliquables) :");
+        sender.sendMessage(plugin.message("list.header", "%count%", String.valueOf(locations.size())));
+        // Seul un joueur peut cliquer : la console reçoit les lignes sans boutons
+        boolean clickable = sender instanceof Player;
+        boolean canTp = clickable && sender.hasPermission(PERM + "tp");
+        boolean canRemove = clickable && sender.hasPermission(PERM + "remove");
         for (Map.Entry<Integer, Location> entry : locations.entrySet()) {
             int id = entry.getKey();
             Location loc = entry.getValue();
-            String posString = String.format("%d, %d, %d dans le monde '%s'", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(), loc.getWorld().getName());
-            TextComponent message = new TextComponent(ChatColor.YELLOW.toString() + id + ". " + ChatColor.GRAY + posString + " ");
-            message.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/shib tp " + id));
-            message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Cliquez pour vous téléporter").color(net.md_5.bungee.api.ChatColor.GREEN).create()));
-            TextComponent removeButton = new TextComponent("§7(§c§l-§7)");
-            removeButton.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/shib remove " + id));
-            removeButton.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Cliquez pour supprimer le point #" + id).color(net.md_5.bungee.api.ChatColor.RED).create()));
-            message.addExtra(removeButton);
-            player.spigot().sendMessage(message);
+            Component line = LEGACY.deserialize(plugin.message("list.line",
+                "%id%", String.valueOf(id),
+                "%x%", String.valueOf(loc.getBlockX()),
+                "%y%", String.valueOf(loc.getBlockY()),
+                "%z%", String.valueOf(loc.getBlockZ()),
+                "%world%", loc.isWorldLoaded() ? loc.getWorld().getName() : "?"));
+            if (canTp) {
+                line = line.clickEvent(ClickEvent.runCommand("/shitemsboosts tp " + id))
+                    .hoverEvent(HoverEvent.showText(LEGACY.deserialize(plugin.message("list.hover-tp"))));
+            }
+            if (canRemove) {
+                line = line.append(LEGACY.deserialize(plugin.message("list.remove-button"))
+                    .clickEvent(ClickEvent.runCommand("/shitemsboosts remove " + id))
+                    .hoverEvent(HoverEvent.showText(LEGACY.deserialize(plugin.message("list.hover-remove", "%id%", String.valueOf(id))))));
+            }
+            sender.sendMessage(line);
         }
     }
 
     private void handleTp(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) return;
-        if (args.length < 2) return;
-        Player player = (Player) sender;
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.message("player-only"));
+            return;
+        }
+        if (args.length < 2) {
+            player.sendMessage(plugin.message("tp.usage"));
+            return;
+        }
         try {
             int id = Integer.parseInt(args[1]);
             Location loc = plugin.getLocationManager().getLocation(id);
-            if (loc != null) {
+            if (loc != null && loc.isWorldLoaded()) {
                 player.teleport(loc.clone().add(0.5, 0, 0.5));
-                player.sendMessage(prefix + "Téléportation au point " + ChatColor.YELLOW + "#" + id + ChatColor.GRAY + ".");
+                player.sendMessage(plugin.message("tp.done", "%id%", String.valueOf(id)));
             } else {
-                player.sendMessage(prefix + ChatColor.RED + "Ce point n'existe plus.");
+                player.sendMessage(plugin.message("tp.unknown"));
             }
-        } catch (NumberFormatException e) { /* Ignorer */ }
+        } catch (NumberFormatException e) {
+            player.sendMessage(plugin.message("remove.invalid-id"));
+        }
     }
 
     private void handleReload(CommandSender sender) {
-        plugin.reloadPlugin();
-        sender.sendMessage(prefix + "Le plugin a été rechargé.");
+        String[] error = plugin.reloadPlugin();
+        if (error != null) {
+            sender.sendMessage(plugin.message("reload-failed", "%file%", error[0], "%error%", error[1]));
+            return;
+        }
+        sender.sendMessage(plugin.message("reloaded",
+            "%types%", String.valueOf(plugin.getItemManager().boostTypeCount()),
+            "%points%", String.valueOf(plugin.getLocationManager().getSpawnLocations().size())));
     }
 
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+        List<String> allowed = allowedSubcommands(sender);
+        List<String> matches = new ArrayList<>();
         if (args.length == 1) {
-            return Arrays.asList("add", "remove", "list", "reload", "forcecleanup", "inspect").stream().filter(s -> s.startsWith(args[0].toLowerCase())).collect(Collectors.toList());
+            for (String sub : allowed) {
+                if (sub.startsWith(args[0].toLowerCase(Locale.ROOT))) {
+                    matches.add(sub);
+                }
+            }
+            return matches;
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("remove")) {
-            return plugin.getLocationManager().getSpawnLocations().keySet().stream().map(String::valueOf).filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
+        if (args.length == 2 && allowed.contains(args[0].toLowerCase(Locale.ROOT))) {
+            switch (args[0].toLowerCase(Locale.ROOT)) {
+                case "remove", "tp" -> plugin.getLocationManager().getSpawnLocations().keySet().stream()
+                    .sorted().map(String::valueOf).filter(s -> s.startsWith(args[1])).forEach(matches::add);
+                case "forcecleanup" -> Bukkit.getWorlds().stream().map(World::getName)
+                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))).forEach(matches::add);
+                default -> {
+                }
+            }
         }
-        return List.of();
+        return matches;
     }
 }

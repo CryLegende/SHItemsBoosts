@@ -1,0 +1,51 @@
+# SHItemsBoosts - messages
+#
+# Variables entre %...% selon le message. Codes couleur &.
+
+no-permission: "&7&l« &c&lSH &8&l» &7Vous n'avez pas la &cpermission &7de faire ça."
+# %subs% : les sous-commandes que l'expéditeur peut utiliser
+usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shitemsboosts &7<&e%subs%&7>."
+player-only: "&7&l« &c&lSH &8&l» &7Cette commande est réservée aux &cjoueurs&7."
+# %types% : types de boost chargés, %points% : points d'apparition
+reloaded: "&7&l« &a&lSH &8&l» &7Configuration &arechargée &7(&a%types% &7types de boost, &a%points% &7points d'apparition)."
+# %file% : fichier en erreur, %error% : première ligne de l'erreur
+reload-failed: "&7&l« &c&lSH &8&l» &7Rechargement annulé, erreur dans &c%file% &7: &c%error%&7. L'ancienne configuration reste active."
+
+add:
+  done: "&7&l« &a&lSH &8&l» &7Point d'apparition &a#%id% &7ajouté à votre position."
+
+remove:
+  usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shitemsboosts remove <id>&7."
+  done: "&7&l« &a&lSH &8&l» &7Point d'apparition &a#%id% &7supprimé."
+  unknown: "&7&l« &c&lSH &8&l» &7Aucun point d'apparition avec l'ID &c%id%&7."
+  invalid-id: "&7&l« &c&lSH &8&l» &7L'ID doit être un &cnombre&7."
+
+list:
+  none: "&7&l« &e&lSH &8&l» &7Aucun point d'apparition n'a été défini. Utilisez &e/shitemsboosts add&7."
+  header: "&7&l« &e&lSH &8&l» &7Points d'apparition (&e%count%&7), cliquez pour vous téléporter :"
+  line: "&e%id%. &7%x%, %y%, %z% dans le monde '%world%' "
+  hover-tp: "&aCliquez pour vous téléporter"
+  remove-button: "&7(&c&l-&7)"
+  hover-remove: "&cCliquez pour supprimer le point #%id%"
+
+tp:
+  usage: "&7&l« &e&lSH &8&l» &7Utilisation : &e/shitemsboosts tp <id>&7."
+  done: "&7&l« &a&lSH &8&l» &7Téléportation au point &a#%id%&7."
+  unknown: "&7&l« &c&lSH &8&l» &7Ce point &cn'existe plus&7."
+
+forcecleanup:
+  world-required: "&7&l« &c&lSH &8&l» &7Depuis la console, indiquez le monde : &e/shitemsboosts forcecleanup <monde>&7."
+  world-unknown: "&7&l« &c&lSH &8&l» &7Monde &c%world% &7introuvable."
+  started: "&7&l« &e&lSH &8&l» &7Nettoyage forcé dans le monde '&e%world%&7'..."
+  done: "&7&l« &a&lSH &8&l» &7Nettoyage terminé : &a%count% &7ancien(s) item(s) orphelin(s) supprimé(s) du monde '&a%world%&7'."
+
+inspect:
+  none: "&7&l« &e&lSH &8&l» &7Aucun item trouvé à proximité."
+  header: "&e--- Inspection de l'item le plus proche ---"
+  item: "&7Item : &e%item%"
+  pickup-delay: "&7Délai de ramassage : &6%ticks% ticks"
+  unlimited-lifetime: "&7Durée de vie illimitée : %value%"
+  tag: "&7Marqueur de boost : %value%"
+  footer: "&e-------------------------------------"
+  "yes": "&aoui"
+  "no": "&cnon"

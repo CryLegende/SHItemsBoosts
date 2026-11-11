@@ -61,6 +61,10 @@ public class ItemManager {
         return activeBoosts.values().stream().anyMatch(boost -> boost.getItemEntityId().equals(uuid));
     }
 
+    public int boostTypeCount() {
+        return boostTypes.size();
+    }
+
     // --- spawnSingleItem() a été modifié pour utiliser la nouvelle structure ---
     private boolean spawnSingleItem() {
         // On vérifie la taille de notre nouvelle map

@@ -1,4 +1,28 @@
-# Configuration générale du plugin SHItemsBoosts
+# SHItemsBoosts
+#
+# Fait apparaître, sur des points d'apparition posés par les admins (locations.yml), des items flottants qui donnent
+# un effet de potion au joueur qui s'en approche. Les boosts, leurs poids et leurs sons sont définis plus bas ; les
+# textes sont dans messages.yml.
+#
+# Commandes (alias : /shib) :
+#   /shitemsboosts add                   Ajoute un point d'apparition à votre position.
+#   /shitemsboosts remove <id>           Supprime un point d'apparition.
+#   /shitemsboosts list                  Liste les points (cliquable pour se téléporter ou supprimer).
+#   /shitemsboosts tp <id>               Vous téléporte à un point.
+#   /shitemsboosts forcecleanup [monde]  Supprime les anciens items orphelins du monde (le vôtre par défaut).
+#   /shitemsboosts inspect               Affiche les infos de l'item le plus proche.
+#   /shitemsboosts reload                Recharge config.yml et messages.yml, retire les boosts posés puis les repose.
+#                                        locations.yml n'est pas relu : il est réécrit à chaque ajout ou retrait.
+#
+# Permissions (op par défaut) :
+#   shitemsboosts.admin               Toute l'administration.
+#   shitemsboosts.admin.add           add.
+#   shitemsboosts.admin.remove        remove.
+#   shitemsboosts.admin.list          list.
+#   shitemsboosts.admin.tp            tp.
+#   shitemsboosts.admin.forcecleanup  forcecleanup.
+#   shitemsboosts.admin.inspect       inspect.
+#   shitemsboosts.admin.reload        reload.
 
 settings:
   # Nombre maximum de boosts actifs en même temps sur la carte.
@@ -12,6 +36,8 @@ settings:
   spawn-check-interval-seconds: 3
   # Rayon de détection pour ramasser l'item (en blocs).
   pickup-radius: 2
+  # Fait apparaître d'un coup tous les boosts possibles au démarrage et après un /shitemsboosts reload, au lieu
+  # d'un toutes les spawn-check-interval-seconds.
   startup-burst: true
 
 sound:
